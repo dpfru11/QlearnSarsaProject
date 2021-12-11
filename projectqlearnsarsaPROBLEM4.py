@@ -7,32 +7,32 @@ import random
 MAX_T = 250
 N_EPISODES = 500
 EPS = 0.1
-
+#varyingEPS = 0.1
+twoGoal = True
 ALPHA = 0.7
 ALPHA_SAR = 0.7
 
-rows = 4
-cols = 12
+rows = 7
+cols = 13
 env = {}
-
 
 #3D Value: row, column, and specified action
 q_table = np.zeros((rows, cols, 4))
-
-#For Extra credit
 #q_table = np.full((rows, cols, 4), fill_value=-1000)
 
-#Set up rewards table and starting location
 rewards = np.full((rows, cols), -1)
-rewards[3, 11] = 100
-for i in range(1, 11):
+rewards[0, cols - 1] = 100
+rewards[rows - 1, cols - 1] = 100
+for i in range(5,12):
     rewards[3, i] = -100
-for row in rewards:
-    print(row)
 
 rewardsOverRuns = []
 
 startingLoc = (3,0)
+
+#Print rewards table
+for row in rewards:
+    print(row)
 
 #Action space by row, range (NOT (x, y))
 up=(-1,0)
@@ -77,6 +77,7 @@ Takes the shortest path on the grid BASED ON THE LAST USED METHOD (Q/SARSA).
 A few bugs:
 1. Does not work if algorithm created a policy cycle in the graph (Just keep displaying the same cell until you run out of steps)
 2. If policy leads you out of the matrix, crashes the script. (Simple boundary checking can fix this, will bother with later since crashes are not frequent)
+Not for grade, but for myself ¯\_(ツ)_/¯
 """
 def shortestPath(startState):
     step = 1
@@ -107,9 +108,9 @@ def Qlearn():
             newState = getSucc(currentState,currentAction)
 
             #Check Boundaries, waste a step if out of boundary
-            if newState[1] > 11 or newState[1] < 0:
+            if newState[1] >= cols or newState[1] <= 0:
                 newState = currentState
-            elif newState[0] > 3 or newState[0] < 0:
+            elif newState[0] >= rows or newState[0] <= 0:
                 newState = currentState
             
             reward = rewards[newState[0], newState[1]]
@@ -129,10 +130,10 @@ def Qlearn():
                 currentState = newState
             step += 1
         runReward.append(totalReward)
-        #For Varying Epsilon Problem
         #if varyEPS != 0:
          #   varyEPS = varyEPS - 0.1/500
     print("End Training")
+    #print(runReward)
     return runReward
 
 """ON-POLICY: Q-Value Equation: Q(S,A) <- Q(S,A) + ALPHA * [Reward + GAM * Q(S', A') - Q(S,A)]"""
@@ -149,9 +150,9 @@ def SARSA():
             newState = getSucc(currentState,currentAction)
             
             #Boundary Checking
-            if newState[1] > 11 or newState[1] < 0:
+            if newState[1] >= cols or newState[1] < 0:
                 newState = currentState
-            elif newState[0] > 3 or newState[0] < 0:
+            elif newState[0] >= rows or newState[0] < 0:
                 newState = currentState
             
             newAction = getAction(newState, varyEPS)
@@ -164,8 +165,8 @@ def SARSA():
             oldq = q_table[currentState[0], currentState[1], actionList.index(currentAction)]
             newq = oldq + ALPHA_SAR * (reward + q_table[newState[0], newState[1], actionList.index(newAction)] - oldq)
             q_table[currentState[0], currentState[1], actionList.index(currentAction)] = newq
-            
-            #Jump back to start upon reaching the cliff
+
+            #Jump to start
             if rewards[newState[0], newState[1]] == -100:
                 currentState = getStart()
                 currentAction = getAction(currentState, varyEPS)
@@ -175,26 +176,27 @@ def SARSA():
             
             step += 1
         runReward.append(totalReward)
-        #Commented code is For varying epsilon problem
         #if varyEPS != 0:
          #   varyEPS = varyEPS - 0.1/500
     print("End Training")
+    #print(runReward)
     return runReward
 
-
-#Run QLearning Algorithm 10 times
+#Run QLearn Algorithm 10 times
 for i in range(0, 10):
     q_table = np.zeros((rows, cols, 4))
     rewardsOverRuns.append(Qlearn())
+
 print("Shortest path QL:\n")
 #print(shortestPath(getStart()))
 print("averaging")
 avgsQL = [float(sum(col))/len(col) for col in zip(*rewardsOverRuns)]
 
+#Visual display of optimal policies for each cell
 print("Policy")
-for row in range(0,4):
-    for col in range(0,12):
-        if col == 11:
+for row in range(0,rows):
+    for col in range(0,cols):
+        if col == cols - 1:
             print("(" + str(row) + ", "+ str(col) + ")" + "{" + str(actionStrings[np.argmax(q_table[row, col])]) + "}")
         else:   
             print("(" + str(row) + ", "+ str(col) + ")" + "{" + str(actionStrings[np.argmax(q_table[row, col])]) + "}", end='')
@@ -204,18 +206,18 @@ rewardsOverRuns = []
 for i in range(0, 10):
     q_table = np.zeros((rows, cols, 4))
     rewardsOverRuns.append(SARSA())
-
 print("averaging")
 avgsSA = [float(sum(col))/len(col) for col in zip(*rewardsOverRuns)]
 
 xaxis = []
 for i in range(0, 500): xaxis.append(i)
 
+
 #Visual display of optimal policies for each cell
 print("Policy")
-for row in range(0,4):
-    for col in range(0,12):
-        if col == 11:
+for row in range(0,rows):
+    for col in range(0,cols):
+        if col == cols - 1:
             print("(" + str(row) + ", "+ str(col) + ")" + "{" + str(actionStrings[np.argmax(q_table[row, col])]) + "}")
         else:   
             print("(" + str(row) + ", "+ str(col) + ")" + "{" + str(actionStrings[np.argmax(q_table[row, col])]) + "}", end='')
